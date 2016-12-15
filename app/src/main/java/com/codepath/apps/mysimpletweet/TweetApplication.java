@@ -1,5 +1,6 @@
 package com.codepath.apps.mysimpletweet;
 
+import com.codepath.apps.mysimpletweet.service.RestClient;
 import com.raizlabs.android.dbflow.config.FlowConfig;
 import com.raizlabs.android.dbflow.config.FlowLog;
 import com.raizlabs.android.dbflow.config.FlowManager;

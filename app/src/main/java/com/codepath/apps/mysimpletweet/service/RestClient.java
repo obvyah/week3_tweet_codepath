@@ -1,4 +1,4 @@
-package com.codepath.apps.mysimpletweet;
+package com.codepath.apps.mysimpletweet.service;
 
 import org.scribe.builder.api.Api;
 import org.scribe.builder.api.TwitterApi;
