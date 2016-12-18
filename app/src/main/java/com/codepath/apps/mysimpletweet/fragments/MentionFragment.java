@@ -2,12 +2,35 @@ package com.codepath.apps.mysimpletweet.fragments;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.TextView;
 
+import com.codepath.apps.mysimpletweet.Constant;
+import com.codepath.apps.mysimpletweet.EndlessScrollListener;
 import com.codepath.apps.mysimpletweet.R;
+import com.codepath.apps.mysimpletweet.TweetApplication;
+import com.codepath.apps.mysimpletweet.Utility;
+import com.codepath.apps.mysimpletweet.models.Tweet;
+import com.codepath.apps.mysimpletweet.service.RestClient;
+import com.loopj.android.http.JsonHttpResponseHandler;
+import com.squareup.picasso.Picasso;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.List;
+
+import cz.msebera.android.httpclient.Header;
 
 /**
  * Created by obvyah on 16/12/4.
@@ -31,6 +54,12 @@ public class MentionFragment extends Fragment {
     private String tabName = "";
 
 
+    private static final String TAG = "ActivityHomeTimeline";
+    private RestClient client;
+    private ListView lvHomeTimeline;
+    private ArrayList<Tweet> tweetArrayList;
+    private HomeTimelineArrayAdapter adapter;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,11 +77,118 @@ public class MentionFragment extends Fragment {
         // Inflate the layout for this fragment
         View root = inflater.inflate(R.layout.fragment_timeline, container, false);
 
+        client  = TweetApplication.getRestClient();
+        lvHomeTimeline = (ListView) root.findViewById(R.id.lvTimeline);
+        tweetArrayList = new ArrayList<Tweet>();
+        adapter = new HomeTimelineArrayAdapter(getContext(),R.layout.item_tweet, tweetArrayList);
+        lvHomeTimeline.setAdapter(adapter);
+        lvHomeTimeline.setOnScrollListener(new EndlessScrollListener() {
+
+            private long getMaxId(int totalItemsCount) {
+                try {
+                    return Long.parseLong(adapter.getItem(totalItemsCount - 1).getId()) - 1;
+                } catch (NullPointerException e) {
+                    return 0;
+                }
+            }
+
+            @Override
+            public boolean onLoadMore(int page, int totalItemsCount) {
+                client.getMentionTimeline(Constant.REQUEST_TWEETS_COUNT, getMaxId(totalItemsCount), new JsonHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
+                        adapter.addAll(Tweet.fromJson(response));
+                    }
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+
+                    }
+                });
+                return true;
+            }
+        });
+
+        //TODO(Workaround)
+        populateTimeline(Constant.REQUEST_TWEETS_COUNT);
 
         return root;
     }
 
+    private void populateTimeline(int count) {
+        populateTimeline(count, null);
+    }
 
+
+    private void populateTimeline(int count, Long max_id){
+        client.getMentionTimeline(count, max_id, new JsonHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
+                adapter.addAll(Tweet.fromJson(response));
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+
+            }
+        });
+    }
+
+    public void updateList(String id){
+        adapter.insert(Tweet.byId(id),0);
+    }
+
+    private class HomeTimelineArrayAdapter extends ArrayAdapter<Tweet> {
+        public HomeTimelineArrayAdapter(Context context, int textViewResourceId, List<Tweet> objects) {
+            super(context, textViewResourceId, objects);
+        }
+
+        @Override
+        public int getViewTypeCount() {
+            return 1;
+        }
+
+        @NonNull
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            Tweet tweet = getItem(position);
+            ViewHolder holder;
+
+            if(convertView == null){
+                convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_tweet,parent,false);
+                holder = new ViewHolder(convertView);
+                convertView.setTag(holder);
+            }
+
+            holder = (ViewHolder) convertView.getTag();
+            holder.txCreatedAt.setText(Utility.toFriendlyTimestamp(tweet.getCreated_at()));
+            try {
+                holder.txContent.setText(URLDecoder.decode(tweet.getText(), "utf8"));
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
+            } catch (Exception e){}
+            holder.txScreenName.setText(String.format("@%s", tweet.getUser().getScreen_name()));
+            holder.txName.setText(tweet.getUser().getName());
+            Picasso.with(getContext()).load(tweet.getUser().getProfile_image_url_https()).noFade().fit().into(holder.ivProfileImage);
+            return convertView;
+        }
+
+        private class ViewHolder {
+            ImageView ivProfileImage;
+            TextView txName;
+            TextView txScreenName;
+            TextView txContent;
+            TextView txCreatedAt;
+
+            public ViewHolder(View v) {
+                ivProfileImage = (ImageView) v.findViewById(R.id.ivProfileImg);
+                txName = (TextView) v.findViewById(R.id.txName);
+                txScreenName = (TextView) v.findViewById(R.id.txScreenName);
+                txCreatedAt = (TextView) v.findViewById(R.id.txCreatedAt);
+                txContent = (TextView) v.findViewById(R.id.txContent);
+            }
+        }
+    }
 
 
     /** added for demo lifecycle of the activity and fragment */
