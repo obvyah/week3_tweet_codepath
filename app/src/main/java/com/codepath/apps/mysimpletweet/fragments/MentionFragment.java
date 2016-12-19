@@ -17,6 +17,7 @@ import com.codepath.apps.mysimpletweet.EndlessScrollListener;
 import com.codepath.apps.mysimpletweet.R;
 import com.codepath.apps.mysimpletweet.TweetApplication;
 import com.codepath.apps.mysimpletweet.Utility;
+import com.codepath.apps.mysimpletweet.adapters.TweetListAdapter;
 import com.codepath.apps.mysimpletweet.models.Tweet;
 import com.codepath.apps.mysimpletweet.service.RestClient;
 import com.loopj.android.http.JsonHttpResponseHandler;
@@ -58,7 +59,7 @@ public class MentionFragment extends Fragment {
     private RestClient client;
     private ListView lvHomeTimeline;
     private ArrayList<Tweet> tweetArrayList;
-    private HomeTimelineArrayAdapter adapter;
+    private TweetListAdapter adapter;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -80,7 +81,7 @@ public class MentionFragment extends Fragment {
         client  = TweetApplication.getRestClient();
         lvHomeTimeline = (ListView) root.findViewById(R.id.lvTimeline);
         tweetArrayList = new ArrayList<Tweet>();
-        adapter = new HomeTimelineArrayAdapter(getContext(),R.layout.item_tweet, tweetArrayList);
+        adapter = new TweetListAdapter(getContext(),R.layout.item_tweet, tweetArrayList);
         lvHomeTimeline.setAdapter(adapter);
         lvHomeTimeline.setOnScrollListener(new EndlessScrollListener() {
 
@@ -137,59 +138,6 @@ public class MentionFragment extends Fragment {
     public void updateList(String id){
         adapter.insert(Tweet.byId(id),0);
     }
-
-    private class HomeTimelineArrayAdapter extends ArrayAdapter<Tweet> {
-        public HomeTimelineArrayAdapter(Context context, int textViewResourceId, List<Tweet> objects) {
-            super(context, textViewResourceId, objects);
-        }
-
-        @Override
-        public int getViewTypeCount() {
-            return 1;
-        }
-
-        @NonNull
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            Tweet tweet = getItem(position);
-            ViewHolder holder;
-
-            if(convertView == null){
-                convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_tweet,parent,false);
-                holder = new ViewHolder(convertView);
-                convertView.setTag(holder);
-            }
-
-            holder = (ViewHolder) convertView.getTag();
-            holder.txCreatedAt.setText(Utility.toFriendlyTimestamp(tweet.getCreated_at()));
-            try {
-                holder.txContent.setText(URLDecoder.decode(tweet.getText(), "utf8"));
-            } catch (UnsupportedEncodingException e) {
-                e.printStackTrace();
-            } catch (Exception e){}
-            holder.txScreenName.setText(String.format("@%s", tweet.getUser().getScreen_name()));
-            holder.txName.setText(tweet.getUser().getName());
-            Picasso.with(getContext()).load(tweet.getUser().getProfile_image_url_https()).noFade().fit().into(holder.ivProfileImage);
-            return convertView;
-        }
-
-        private class ViewHolder {
-            ImageView ivProfileImage;
-            TextView txName;
-            TextView txScreenName;
-            TextView txContent;
-            TextView txCreatedAt;
-
-            public ViewHolder(View v) {
-                ivProfileImage = (ImageView) v.findViewById(R.id.ivProfileImg);
-                txName = (TextView) v.findViewById(R.id.txName);
-                txScreenName = (TextView) v.findViewById(R.id.txScreenName);
-                txCreatedAt = (TextView) v.findViewById(R.id.txCreatedAt);
-                txContent = (TextView) v.findViewById(R.id.txContent);
-            }
-        }
-    }
-
 
     /** added for demo lifecycle of the activity and fragment */
     @Override
