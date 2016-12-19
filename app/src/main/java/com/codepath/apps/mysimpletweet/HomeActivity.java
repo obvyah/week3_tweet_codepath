@@ -1,5 +1,6 @@
 package com.codepath.apps.mysimpletweet;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -35,6 +36,7 @@ public class HomeActivity extends AppCompatActivity implements OnTweetSuccessLis
         viewPager.setAdapter(adapter);
         // Give the PagerSlidingTabStrip the ViewPager
         PagerSlidingTabStrip tabsStrip = (PagerSlidingTabStrip) findViewById(R.id.tabs);
+        tabsStrip.setShouldExpand(true);
         // Attach the view pager to the tab strip
         tabsStrip.setViewPager(viewPager);
 
@@ -44,6 +46,11 @@ public class HomeActivity extends AppCompatActivity implements OnTweetSuccessLis
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.home, menu);
         return true;
+    }
+
+    public void actionProfile(MenuItem items){
+        Intent i = new Intent(this, ProfileActivity.class);
+        startActivity(i);
     }
 
     public void actionCompose(MenuItem item) {

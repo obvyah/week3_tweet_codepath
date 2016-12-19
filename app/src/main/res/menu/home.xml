@@ -7,4 +7,10 @@
         android:title="@string/action_compose"
         android:onClick="actionCompose"
         android:id="@+id/action_compose" />
+
+    <item
+        app:showAsAction="always"
+        android:title="@string/action_profile"
+        android:onClick="actionProfile"
+        android:id="@+id/action_profile" />
 </menu>
