@@ -2,12 +2,36 @@ package com.codepath.apps.mysimpletweet.fragments;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.ListView;
+import android.widget.TextView;
 
+import com.codepath.apps.mysimpletweet.Constant;
+import com.codepath.apps.mysimpletweet.EndlessScrollListener;
 import com.codepath.apps.mysimpletweet.R;
+import com.codepath.apps.mysimpletweet.TweetApplication;
+import com.codepath.apps.mysimpletweet.Utility;
+import com.codepath.apps.mysimpletweet.adapters.TweetListAdapter;
+import com.codepath.apps.mysimpletweet.models.Tweet;
+import com.codepath.apps.mysimpletweet.service.RestClient;
+import com.loopj.android.http.JsonHttpResponseHandler;
+import com.squareup.picasso.Picasso;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.List;
+
+import cz.msebera.android.httpclient.Header;
 
 /**
  * Created by obvyah on 16/12/4.
@@ -31,6 +55,12 @@ public class MentionFragment extends Fragment {
     private String tabName = "";
 
 
+    private static final String TAG = "ActivityHomeTimeline";
+    private RestClient client;
+    private ListView lvHomeTimeline;
+    private ArrayList<Tweet> tweetArrayList;
+    private TweetListAdapter adapter;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -48,12 +78,66 @@ public class MentionFragment extends Fragment {
         // Inflate the layout for this fragment
         View root = inflater.inflate(R.layout.fragment_timeline, container, false);
 
+        client  = TweetApplication.getRestClient();
+        lvHomeTimeline = (ListView) root.findViewById(R.id.lvTimeline);
+        tweetArrayList = new ArrayList<Tweet>();
+        adapter = new TweetListAdapter(getContext(),R.layout.item_tweet, tweetArrayList);
+        lvHomeTimeline.setAdapter(adapter);
+        lvHomeTimeline.setOnScrollListener(new EndlessScrollListener() {
+
+            private long getMaxId(int totalItemsCount) {
+                try {
+                    return Long.parseLong(adapter.getItem(totalItemsCount - 1).getId()) - 1;
+                } catch (NullPointerException e) {
+                    return 0;
+                }
+            }
+
+            @Override
+            public boolean onLoadMore(int page, int totalItemsCount) {
+                client.getMentionTimeline(Constant.REQUEST_TWEETS_COUNT, getMaxId(totalItemsCount), new JsonHttpResponseHandler() {
+                    @Override
+                    public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
+                        adapter.addAll(Tweet.fromJson(response));
+                    }
+
+                    @Override
+                    public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+
+                    }
+                });
+                return true;
+            }
+        });
+
+        //TODO(Workaround)
+        populateTimeline(Constant.REQUEST_TWEETS_COUNT);
 
         return root;
     }
 
+    private void populateTimeline(int count) {
+        populateTimeline(count, null);
+    }
 
 
+    private void populateTimeline(int count, Long max_id){
+        client.getMentionTimeline(count, max_id, new JsonHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
+                adapter.addAll(Tweet.fromJson(response));
+            }
+
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+
+            }
+        });
+    }
+
+    public void updateList(String id){
+        adapter.insert(Tweet.byId(id),0);
+    }
 
     /** added for demo lifecycle of the activity and fragment */
     @Override

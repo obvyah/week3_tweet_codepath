@@ -46,11 +46,37 @@ public class RestClient extends OAuthBaseClient {
 		if(max_id!=null) {
 			params.put("max_id", max_id);
 		}
+		client.get(apiUrl, params, handler);
+	}
+
+	public void getMentionTimeline(int count, Long max_id, AsyncHttpResponseHandler handler){
+		String apiUrl = getApiUrl("statuses/mentions_timeline.json");
+		RequestParams params = new RequestParams();
+		params.put("count",count);
+		if(max_id!=null) {
+			params.put("max_id", max_id);
+		}
+		client.get(apiUrl,params,handler);
+	}
+
+	public void getUserTimeline(String user_id, int count, Long max_id, AsyncHttpResponseHandler handler){
+		String apiUrl = getApiUrl("statuses/user_timeline.json");
+		RequestParams params = new RequestParams();
+		params.put("user_id", user_id);
+		params.put("count",count);
+		if(max_id!=null) {
+			params.put("max_id", max_id);
+		}
 		client.get(apiUrl,params,handler);
 	}
 
 	public void getAccountSetting(AsyncHttpResponseHandler handler){
 		String apiUrl = getApiUrl("account/settings.json");
+		client.get(apiUrl,handler);
+	}
+
+	public void getAccountVerifyCredentials(AsyncHttpResponseHandler handler){
+		String apiUrl = getApiUrl("account/verify_credentials.json");
 		client.get(apiUrl,handler);
 	}
 

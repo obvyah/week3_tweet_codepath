@@ -1,44 +1,52 @@
 package com.codepath.apps.mysimpletweet.fragments;
 
 import android.content.Context;
-import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import com.codepath.apps.mysimpletweet.Constant;
 import com.codepath.apps.mysimpletweet.EndlessScrollListener;
-import com.codepath.apps.mysimpletweet.ProfileActivity;
 import com.codepath.apps.mysimpletweet.R;
 import com.codepath.apps.mysimpletweet.TweetApplication;
+import com.codepath.apps.mysimpletweet.Utility;
 import com.codepath.apps.mysimpletweet.adapters.TweetListAdapter;
 import com.codepath.apps.mysimpletweet.models.Tweet;
 import com.codepath.apps.mysimpletweet.service.RestClient;
 import com.loopj.android.http.JsonHttpResponseHandler;
+import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.List;
 
 import cz.msebera.android.httpclient.Header;
 
 /**
  * Created by obvyah on 16/12/4.
  */
-public class TimelineFragment extends Fragment {
+public class UserTweetFragment extends Fragment {
 
     /**
      * add this static method for creating new MentionFragment to use
      */
-    public static Fragment newInstance(int position, String tabName){
-        Fragment f = new TimelineFragment();
+    public static Fragment newInstance(int position, String tabName, String userId){
+        Fragment f = new UserTweetFragment();
         Bundle extras = new Bundle();
         extras.putInt("POSITION", position);
         extras.putString("TAB_NAME", tabName);
+        extras.putString("USER_ID", userId);
         f.setArguments(extras);
         return f;
     }
@@ -46,7 +54,7 @@ public class TimelineFragment extends Fragment {
     /** the extra data of this fragment */
     private int position = 0;
     private String tabName = "";
-
+    private String userId = "";
 
     private static final String TAG = "ActivityHomeTimeline";
     private RestClient client;
@@ -62,6 +70,7 @@ public class TimelineFragment extends Fragment {
         Bundle extras = getArguments();
         this.position = extras.getInt("POSITION");
         this.tabName = extras.getString("TAB_NAME");
+        this.userId = extras.getString("USER_ID");
     }
 
     @Override
@@ -74,6 +83,8 @@ public class TimelineFragment extends Fragment {
         client  = TweetApplication.getRestClient();
         lvHomeTimeline = (ListView) root.findViewById(R.id.lvTimeline);
         tweetArrayList = new ArrayList<Tweet>();
+        adapter = new TweetListAdapter(getContext(),R.layout.item_tweet, tweetArrayList);
+        lvHomeTimeline.setAdapter(adapter);
         lvHomeTimeline.setOnScrollListener(new EndlessScrollListener() {
 
             private long getMaxId(int totalItemsCount) {
@@ -86,7 +97,7 @@ public class TimelineFragment extends Fragment {
 
             @Override
             public boolean onLoadMore(int page, int totalItemsCount) {
-                client.getHomeTimeline(Constant.REQUEST_TWEETS_COUNT, getMaxId(totalItemsCount), new JsonHttpResponseHandler() {
+                client.getUserTimeline(userId, Constant.REQUEST_TWEETS_COUNT, getMaxId(totalItemsCount), new JsonHttpResponseHandler() {
                     @Override
                     public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
                         adapter.addAll(Tweet.fromJson(response));
@@ -101,37 +112,10 @@ public class TimelineFragment extends Fragment {
             }
         });
 
+        //TODO(Workaround)
+        populateTimeline(Constant.REQUEST_TWEETS_COUNT);
+
         return root;
-    }
-
-    @Override
-    public void onActivityCreated(Bundle savedInstanceState){
-        super.onActivityCreated(savedInstanceState);
-
-        initAdapter();
-
-        //Todo Workaround: fetch data
-        if(Tweet.countItems() == 0) {
-            populateTimeline(Constant.REQUEST_TWEETS_COUNT);
-        }else{
-            adapter.addAll(Tweet.recentItems());
-        }
-    }
-
-    private void initAdapter(){
-        adapter = new TweetListAdapter(getContext(),R.layout.item_tweet, tweetArrayList);
-        lvHomeTimeline.setAdapter(adapter);
-        adapter.setListViewAdapterListener(new TweetListAdapter.ListViewAdapterListener() {
-            @Override
-            public void onClickItem(int position, Tweet tweet) {
-                openProfilePage(tweet);
-            }
-
-            @Override
-            public void onClickItemImage(int position, Tweet tweet) {
-                openProfilePage(tweet);
-            }
-        });
     }
 
     private void populateTimeline(int count) {
@@ -140,11 +124,10 @@ public class TimelineFragment extends Fragment {
 
 
     private void populateTimeline(int count, Long max_id){
-        client.getHomeTimeline(count, max_id, new JsonHttpResponseHandler() {
+        client.getUserTimeline(userId, count, max_id, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
-                Tweet.fromJson(response);
-                adapter.addAll(Tweet.recentItems());
+                adapter.addAll(Tweet.fromJson(response));
             }
 
             @Override
@@ -155,13 +138,7 @@ public class TimelineFragment extends Fragment {
     }
 
     public void updateList(String id){
-        adapter.insert(Tweet.byId(id), 0);
-    }
-
-    private void openProfilePage(Tweet tweet){
-        Intent i = new Intent(getActivity(), ProfileActivity.class);
-        i.putExtra("EXTRA_USER", tweet.getUser());
-        startActivity(i);
+        adapter.insert(Tweet.byId(id),0);
     }
 
 
@@ -169,6 +146,12 @@ public class TimelineFragment extends Fragment {
     @Override
     public void onAttach(Context context){
         super.onAttach(context);
+
+    }
+
+    @Override
+    public void onActivityCreated(Bundle savedInstanceState){
+        super.onActivityCreated(savedInstanceState);
 
     }
 
